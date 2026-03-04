@@ -1,5 +1,5 @@
 // useCardDetection.ts - React hook for card detection
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import * as ort from 'onnxruntime-web';
 import {
   initYoloSession,
@@ -61,7 +61,7 @@ export function useCardDetection(options: UseCardDetectionOptions = {}) {
   // Type for sharpness data to avoid type errors
   type SharpnessDataType = { variance: number; normalized: number; quality: 'excellent' | 'good' | 'poor' | 'unknown' };
 
-  const yoloInputShape = [1, 3, 320, 320];
+  const yoloInputShape = useMemo(() => [1, 3, 320, 320], []);
   const yoloScoreThresh = 0.25;
   const yoloNmsIouThresh = 0.45;
   const historySize = 10;

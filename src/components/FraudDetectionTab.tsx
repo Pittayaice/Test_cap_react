@@ -15,7 +15,7 @@ const FraudDetectionTab: React.FC<FraudDetectionTabProps> = ({ imageData }) => {
   const [fraudChecks, setFraudChecks] = useState<FraudCheck[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [overallStatus, setOverallStatus] = useState<'pass' | 'fail'>('pass');
+  const [, setOverallStatus] = useState<'pass' | 'fail'>('pass');
 
   useEffect(() => {
     if (imageData) {
