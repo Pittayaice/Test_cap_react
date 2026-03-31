@@ -27,7 +27,7 @@ export interface QualityMetrics {
 export const CARD_RATIO = 1.59; // Standard card ratio (86mm / 54mm)
 export const RATIO_TOLERANCE = 0.15; // Allow 15% deviation
 export const SCORE_THRESHOLD = 0.60; // Card positioning threshold
-export const REQUIRED_STABLE_FRAMES = 10; // Number of stable frames needed
+export const REQUIRED_STABLE_FRAMES = 15; // Number of stable frames needed
 
 // Check if detected box has valid card aspect ratio
 export function isValidCardRatio(box: number[]): CardRatioCheck {

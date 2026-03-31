@@ -1,4 +1,5 @@
 // api/apiService.ts - Centralized API service
+// const API_BASE_URL = 'http://127.0.0.1:8000';
 const API_BASE_URL = 'https://id-ocr-s3bfstl62a-eu.a.run.app';
 
 export interface ServerResponse {
@@ -14,10 +15,12 @@ export interface ServerResponse {
  */
 export async function uploadCardImage(
   blob: Blob,
-  filename: string = 'idcard.jpg'
+  filename: string = 'idcard.jpg',
+  hasSpikeReflection: boolean = false
 ): Promise<ServerResponse> {
   const formData = new FormData();
   formData.append('file', blob, filename);
+  formData.append('has_spike_reflection', String(hasSpikeReflection));
 
   const response = await fetch(`${API_BASE_URL}/check`, {
     method: 'POST',

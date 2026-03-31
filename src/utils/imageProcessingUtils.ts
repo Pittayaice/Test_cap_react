@@ -28,12 +28,12 @@ export function getCameraConstraints(deviceId?: string): MediaStreamConstraints 
   return {
     video: {
       width: {
-        min: 1280,
+        min: 640,
         ideal: isMobile ? 1920 : 1280,
         max: 4096
       },
       height: {
-        min: 720,
+        min: 480,
         ideal: isMobile ? 1080 : 720,
         max: 2160
       },

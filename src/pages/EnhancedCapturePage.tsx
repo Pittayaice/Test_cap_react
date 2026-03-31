@@ -14,21 +14,26 @@ const EnhancedCapturePage: React.FC = () => {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedCanvas, setCapturedCanvas] = useState<HTMLCanvasElement | null>(null);
+  const [originalUploadFile, setOriginalUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [autoCapturedSourceCanvas, setAutoCapturedSourceCanvas] = useState<HTMLCanvasElement | null>(null);
 
   const {
     isReady,
     isProcessing,
     detectionStatus,
+    hasSpikeReflection,
     processFrame,
     startProcessing,
     stopProcessing,
     reset
   } = useCardDetection({
     modelPath: '/best320.onnx',
-    onCardDetected: (canvas) => {
+    onCardDetected: ({ croppedCanvas, sourceCanvas }) => {
       console.log('Card detected!');
-      setCapturedCanvas(canvas);
+      setOriginalUploadFile(null);
+      setAutoCapturedSourceCanvas(sourceCanvas);
+      setCapturedCanvas(croppedCanvas);
       stopCamera();
     },
     onError: (error) => {
@@ -39,6 +44,8 @@ const EnhancedCapturePage: React.FC = () => {
 
   const startCamera = async () => {
     try {
+      setAutoCapturedSourceCanvas(null);
+      setOriginalUploadFile(null);
       const constraints = getCameraConstraints();
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
       
@@ -103,7 +110,10 @@ const EnhancedCapturePage: React.FC = () => {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      setOriginalUploadFile(file);
+      setAutoCapturedSourceCanvas(null);
       const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
       img.onload = () => {
         const canvas = document.createElement('canvas');
         canvas.width = img.width;
@@ -113,26 +123,53 @@ const EnhancedCapturePage: React.FC = () => {
           ctx.drawImage(img, 0, 0);
           setCapturedCanvas(canvas);
         }
+        URL.revokeObjectURL(objectUrl);
       };
-      img.src = URL.createObjectURL(file);
+      img.src = objectUrl;
     }
   };
 
   const uploadToServer = async () => {
-    if (!capturedCanvas) return;
+    if (!capturedCanvas && !originalUploadFile) return;
 
     setIsUploading(true);
     try {
       console.log('Starting upload from EnhancedCapturePage...');
-      const blob = await canvasToBlob(capturedCanvas, 'image/jpeg', 0.95);
-      const response = await uploadCardImage(blob, 'idcard.jpg');
+      let uploadBlob: Blob;
+      let uploadFilename = 'idcard.jpg';
+
+      if (originalUploadFile) {
+        // Preserve original bytes for file uploads to keep parity with Postman tests.
+        uploadBlob = originalUploadFile;
+        uploadFilename = originalUploadFile.name || uploadFilename;
+      } else if (autoCapturedSourceCanvas) {
+        // Send original detected frame so backend can run its own crop/OCR pipeline.
+        uploadBlob = await canvasToBlob(autoCapturedSourceCanvas, 'image/png');
+        uploadFilename = 'auto-capture.png';
+      } else {
+        uploadBlob = await canvasToBlob(capturedCanvas!, 'image/jpeg', 0.95);
+      }
+
+      const response = await uploadCardImage(uploadBlob, uploadFilename, hasSpikeReflection);
       
       console.log('Backend response received:', response);
       const parsedData = parseNestedResponse(response);
       console.log('Parsed data:', parsedData);
+
+      let capturedImageDataUrl = capturedCanvas?.toDataURL('image/jpeg');
+      if (!capturedImageDataUrl && originalUploadFile) {
+        capturedImageDataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(new Error('Failed to read uploaded file for preview'));
+          reader.readAsDataURL(originalUploadFile);
+        });
+      }
       
       // Store response and navigate to results
-      sessionStorage.setItem('capturedImage', capturedCanvas.toDataURL('image/jpeg'));
+      if (capturedImageDataUrl) {
+        sessionStorage.setItem('capturedImage', capturedImageDataUrl);
+      }
       sessionStorage.setItem('serverResponse', JSON.stringify(parsedData));
       navigate('/results');
     } catch (error) {
@@ -144,6 +181,8 @@ const EnhancedCapturePage: React.FC = () => {
   };
 
   const retake = () => {
+    setOriginalUploadFile(null);
+    setAutoCapturedSourceCanvas(null);
     setCapturedCanvas(null);
     reset();
   };

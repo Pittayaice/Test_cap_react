@@ -1,5 +1,5 @@
 // useCardDetection.ts - React hook for card detection
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import * as ort from 'onnxruntime-web';
 import {
   initYoloSession,
@@ -31,7 +31,7 @@ export interface UseCardDetectionOptions {
   modelPath?: string;
   scoreThreshold?: number;
   requiredStableFrames?: number;
-  onCardDetected?: (croppedCanvas: HTMLCanvasElement) => void;
+  onCardDetected?: (captured: { croppedCanvas: HTMLCanvasElement; sourceCanvas: HTMLCanvasElement }) => void;
   onError?: (error: Error) => void;
 }
 
@@ -57,11 +57,12 @@ export function useCardDetection(options: UseCardDetectionOptions = {}) {
   const frameHistoryRef = useRef<FrameData[]>([]);
   const capturedFrameRef = useRef<any>(null);
   const bestContourRef = useRef<any>(null);
+  const [hasSpikeReflection, setHasSpikeReflection] = useState(false);
 
   // Type for sharpness data to avoid type errors
   type SharpnessDataType = { variance: number; normalized: number; quality: 'excellent' | 'good' | 'poor' | 'unknown' };
 
-  const yoloInputShape = useMemo(() => [1, 3, 320, 320], []);
+  const yoloInputShape = [1, 3, 320, 320];
   const yoloScoreThresh = 0.25;
   const yoloNmsIouThresh = 0.45;
   const historySize = 10;
@@ -224,6 +225,7 @@ export function useCardDetection(options: UseCardDetectionOptions = {}) {
           srcMatForThisFrame = cv.imread(canvas);
           sharpnessData = calculateSharpness(srcMatForThisFrame, bestLocalContour);
           reflectionData = detectReflection(srcMatForThisFrame, bestLocalContour);
+          setHasSpikeReflection(reflectionData.hasSpikeReflection);
         }
 
         const hasReflection = reflectionData.hasReflection;
@@ -317,6 +319,10 @@ export function useCardDetection(options: UseCardDetectionOptions = {}) {
           cv.imshow(croppedCanvas, croppedMat);
           croppedMat.delete();
 
+          // Keep the original detected frame so backend can run its own crop/OCR pipeline.
+          const sourceCanvas = document.createElement('canvas');
+          cv.imshow(sourceCanvas, capturedFrameRef.current);
+
           // Cleanup frame history
           frameHistoryRef.current.forEach(f => {
             try {
@@ -335,7 +341,7 @@ export function useCardDetection(options: UseCardDetectionOptions = {}) {
           setIsProcessing(false);
           setDetectionStatus('Card detected!');
           console.log('✅ [Card Detection] Processing stopped - Card captured');
-          onCardDetected?.(croppedCanvas);
+          onCardDetected?.({ croppedCanvas, sourceCanvas });
 
           if (srcMatForThisFrame) {
             try {
@@ -448,12 +454,14 @@ export function useCardDetection(options: UseCardDetectionOptions = {}) {
       }
     } catch (e) { /* already deleted */ }
     bestContourRef.current = null;
+    setHasSpikeReflection(false);
   }, []);
 
   return {
     isReady,
     isProcessing,
     detectionStatus,
+    hasSpikeReflection,
     processFrame,
     startProcessing,
     stopProcessing,

@@ -48,5 +48,9 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17"
-  }
+  },
+  "description": "A mobile-first React TypeScript application for scanning and analyzing ID cards with fraud detection capabilities.",
+  "main": "postcss.config.js",
+  "author": "",
+  "license": "ISC"
 }
