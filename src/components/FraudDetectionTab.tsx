@@ -15,7 +15,6 @@ const FraudDetectionTab: React.FC<FraudDetectionTabProps> = ({ imageData }) => {
   const [fraudChecks, setFraudChecks] = useState<FraudCheck[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [overallStatus, setOverallStatus] = useState<'pass' | 'fail'>('pass');
 
   useEffect(() => {
     if (imageData) {
@@ -103,8 +102,6 @@ const FraudDetectionTab: React.FC<FraudDetectionTabProps> = ({ imageData }) => {
         
         setFraudChecks(checks);
         
-        const hasFail = checks.some((check) => check.status === 'fail');
-        setOverallStatus(hasFail ? 'fail' : 'pass');
       }
     } catch (err) {
       setError('Failed to run fraud detection');

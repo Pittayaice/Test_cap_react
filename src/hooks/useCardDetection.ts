@@ -27,6 +27,8 @@ import {
 
 declare const cv: any;
 
+const YOLO_INPUT_SHAPE: [number, number, number, number] = [1, 3, 320, 320];
+
 export interface UseCardDetectionOptions {
   modelPath?: string;
   scoreThreshold?: number;
@@ -62,7 +64,6 @@ export function useCardDetection(options: UseCardDetectionOptions = {}) {
   // Type for sharpness data to avoid type errors
   type SharpnessDataType = { variance: number; normalized: number; quality: 'excellent' | 'good' | 'poor' | 'unknown' };
 
-  const yoloInputShape = [1, 3, 320, 320];
   const yoloScoreThresh = 0.25;
   const yoloNmsIouThresh = 0.45;
   const historySize = 10;
@@ -91,11 +92,11 @@ export function useCardDetection(options: UseCardDetectionOptions = {}) {
         
         // Create YOLO canvas
         if (typeof OffscreenCanvas !== 'undefined') {
-          yoloCanvasRef.current = new OffscreenCanvas(yoloInputShape[3], yoloInputShape[2]) as any;
+          yoloCanvasRef.current = new OffscreenCanvas(YOLO_INPUT_SHAPE[3], YOLO_INPUT_SHAPE[2]) as any;
         } else {
           yoloCanvasRef.current = document.createElement('canvas');
-          yoloCanvasRef.current.width = yoloInputShape[3];
-          yoloCanvasRef.current.height = yoloInputShape[2];
+          yoloCanvasRef.current.width = YOLO_INPUT_SHAPE[3];
+          yoloCanvasRef.current.height = YOLO_INPUT_SHAPE[2];
         }
 
         setIsReady(true);
@@ -139,7 +140,7 @@ export function useCardDetection(options: UseCardDetectionOptions = {}) {
       });
       frameHistoryRef.current = [];
     };
-  }, [modelPath, onError, yoloInputShape]);
+  }, [modelPath, onError]);
 
   const processFrame = useCallback(
     async (
@@ -177,7 +178,7 @@ export function useCardDetection(options: UseCardDetectionOptions = {}) {
           canvas,
           ortSessionRef.current,
           yoloCanvasRef.current,
-          yoloInputShape,
+          YOLO_INPUT_SHAPE,
           yoloScoreThresh,
           yoloNmsIouThresh
         );
@@ -409,8 +410,7 @@ export function useCardDetection(options: UseCardDetectionOptions = {}) {
       requiredStableFrames,
       onCardDetected,
       yoloScoreThresh,
-      yoloNmsIouThresh,
-      yoloInputShape
+      yoloNmsIouThresh
     ]
   );
 
